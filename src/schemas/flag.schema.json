@@ -18,13 +18,13 @@
     },
     "description": { "type": "string" },
     "labels": {
-      "type": "array",
+      "type": ["array", "null"],
       "items": { "type": "string" },
       "uniqueItems": true
     },
     "availableValues": {
-      "type": "array",
-      "description": "Only valid for string/number flags, not boolean",
+      "type": ["array", "null"],
+      "description": "Only valid for string/number flags, not boolean. CloudBees' CasC writer emits a bare `availableValues:` key (YAML null) when there are no values yet, same as it does for `labels`.",
       "items": {
         "oneOf": [{ "type": "string" }, { "type": "number" }]
       },

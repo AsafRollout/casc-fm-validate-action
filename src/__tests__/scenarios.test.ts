@@ -227,3 +227,51 @@ type: String
     expect(rulesOf(summary)).toContain('schema');
   });
 });
+
+describe('CloudBees CasC writer null-vs-array quirk (flag.tpl)', () => {
+  // flag.tpl generates `labels:` and `availableValues:` via a raw Go `{{ range }}`
+  // loop (not yaml.Marshal like every other field), so an empty slice renders as a
+  // bare key with nothing after the colon, which YAML parses as null rather than [].
+  // Real-world example seen in production: cascProd1's flags/blat6.yaml, f1.yaml,
+  // zero8.yaml all have this exact shape. Regression test for a real false-positive
+  // this caused: schema rejection on `labels: null` cascaded into bogus
+  // "missing-flag" findings for flag-configurations referencing those flags, because
+  // the schema-failed flags were excluded from the clean tree's flagNames set.
+  it('accepts a flag with labels: (bare key, YAML null) same as an empty array', () => {
+    const summary = runValidateOnFiles({
+      'flags/NoLabels.yaml': `
+flag: NoLabels
+flagType: boolean
+description: ""
+labels:
+
+availableValues:
+
+isPermanent: false
+`,
+    });
+    expect(summary.findings).toEqual([]);
+  });
+
+  it('does not cascade into a false missing-flag finding for a config referencing a null-labels flag', () => {
+    const summary = runValidateOnFiles({
+      'flags/NoLabels.yaml': `
+flag: NoLabels
+flagType: boolean
+description: ""
+labels:
+
+availableValues:
+
+isPermanent: false
+`,
+      'flag-configurations/production/NoLabels.config.yaml': `
+flag: NoLabels
+enabled: true
+defaultValue: false
+conditions: []
+`,
+    });
+    expect(summary.findings).toEqual([]);
+  });
+});

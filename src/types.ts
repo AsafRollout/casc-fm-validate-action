@@ -21,8 +21,10 @@ export interface FlagDoc {
   flag: string;
   flagType?: 'boolean' | 'string' | 'number';
   description?: string;
-  labels?: string[];
-  availableValues?: Array<string | number>;
+  /** CloudBees' CasC writer emits a bare `labels:` key (YAML null) when there are no labels, see flag.tpl. */
+  labels?: string[] | null;
+  /** Same null-when-empty quirk as labels, see flag.tpl's raw `{{ range }}` over Variants. */
+  availableValues?: Array<string | number> | null;
   isPermanent?: boolean;
 }
 

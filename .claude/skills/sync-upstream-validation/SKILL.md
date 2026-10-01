@@ -47,6 +47,27 @@ when upstream changes and what in this repo to update in response.
    names (e.g. `isPermanent`, `stickinessProperty`, `availableValues`). These are more
    reliable than the example fixtures in the same repo, which include known-stale/typo'd
    drafts (see Gotchas below).
+6a. **`casc-service`** `internal/services/jobs/feature_management/*.tpl`
+   (`flag.tpl`, `flag_config.tpl`, `custom_prop.tpl`, `target_group.tpl`) — the Go
+   `text/template` files that generate the actual bytes written to each YAML file.
+   **Read these alongside the struct files in (6), not instead of them.** The struct's
+   `yaml:"..."` tag only governs *parsing* (what field name is accepted on read); the
+   `.tpl` + its `GenerateYamlFile()` caller governs what CloudBees' own writer actually
+   *produces* on disk, and the two can disagree in ways a schema derived only from (6)
+   will miss. Concretely: `*_entity.go`'s `GenerateYamlFile()` usually formats each field
+   by calling `toYaml()`/`yaml.Marshal()` (which correctly distinguishes an empty slice
+   `[]` from a nil slice `null`), **except** `flag.tpl`'s `labels`/`availableValues`
+   fields, which go through `arrayToYaml()` + a raw `{{ range .Labels }}` loop in the
+   template instead — and Go's `range` over an empty/nil slice emits nothing, leaving a
+   bare `labels:` key in the output file, which YAML parses as `null`, not `[]`. This is
+   a real, observed-in-production shape (see cascProd1's `flags/blat6.yaml`, `f1.yaml`,
+   `zero8.yaml` — all CloudBees-written, all with `labels:` and bare empty
+   `availableValues:`), not a hypothetical edge case. **Lesson for next time:** when
+   porting a field's schema, grep the relevant `.tpl` file for that field name and check
+   whether it's inside a `{{ range }}`/raw-interpolation (null-when-empty risk) versus
+   passed through a `toYaml()`-wrapped struct (safe). Don't infer "this field is an
+   array, so empty will be `[]`" from the Go struct type alone — the template is the
+   actual writer and can disagree with the type's natural zero value.
 7. **`casc-service`** `pkg/fm/reference/fm-casc/.cloudbees/casc/feature-management/**`
    — real, clean example YAML files. Good for fixture-writing and sanity-checking field
    names. Do NOT trust `pkg/fm/reference/example-casc-files/*.yaml` (sibling directory,
@@ -66,6 +87,46 @@ If those repos aren't present locally, ask the user where they're checked out, o
 grant access — don't guess at validation rules from docs alone when the Go source is
 the authority.
 
+## What decides optional vs. mandatory in CasC YAML
+
+There is no single schema or annotation that marks a field required/optional across
+the whole system — it has to be derived from reading multiple places together, and
+they can disagree (as the `labels`/`availableValues` bug above shows):
+
+1. **What flag-service's `Validate*Casc` functions actually dereference without a nil
+   check.** This is the real authority for "mandatory," since it's what will error at
+   runtime. E.g. `ValidateFCsCasc` (`flag_configuration.go:1584`) unconditionally reads
+   `fcUpdate.FlagName` and errors if the referenced flag doesn't exist — so `flag` is
+   effectively mandatory on a flag-configuration. By contrast, `GetStickinessProperty()`,
+   `GetSeed()` etc. are proto3 getters that return the zero value (`""`) on a nil/absent
+   field with no error — so those are optional.
+2. **The embedded JSON Schemas' `required` arrays** (`pkg/model/schema/*.schema.json`,
+   e.g. `flag_configuration.schema.json`'s `"required": ["enabled", "defaultValue"]`).
+   These only apply to the non-CasC REST API path (see point 1 in "Ground truth"
+   above), but since the *shape* of `conditions`/`defaultValue` is shared, this is a
+   reasonable secondary signal — just not authoritative for CasC specifically. This
+   repo's own schemas (`src/schemas/*.json`) encode the `required` arrays we've chosen,
+   and they are NOT a direct copy of the upstream `required` lists in every case (e.g.
+   this repo requires `flag` on `flag-configuration`, which upstream's API-side
+   `flag_configuration.schema.json` doesn't need to, since the API passes `flagId`
+   out-of-band via the URL path rather than in the JSON body).
+3. **Whether the Go struct field has `omitempty` in its `yaml:"..."` tag**
+   (`*_entity.go` in casc-service). `omitempty` is a weak signal: it means the *writer*
+   won't emit the field when empty, not that the *reader* requires it when present. Do
+   not treat `omitempty`'s absence as proof a field is mandatory — cross-check against
+   point 1.
+4. **What the `.tpl` file unconditionally emits vs. omits.** A field written
+   unconditionally (every CasC template writes every field it knows about, always) is
+   not the same as that field being semantically required — it just means the file will
+   always have the key present, possibly with an empty/null value, as this bug
+   demonstrated. "Always present in the file" and "must have a non-empty value" are
+   different claims; conflating them is exactly how the `labels: null` bug became a
+   false positive.
+
+In short: for "is X mandatory," trust the Go validation code's nil-checks (point 1)
+over any schema's `required` list, and never infer requiredness from whether a
+template happens to print the field.
+
 ## File-by-file map: upstream -> this repo
 
 | Upstream rule / file | This repo | What to change |
@@ -76,6 +137,7 @@ the authority.
 | `flag-service` `pkg/model/schema/target_group_conditions.schema.json` | `src/schemas/target_group_conditions.schema.json` | Same `group.id` -> `group.name` adaptation. |
 | `flag-service` `pkg/model/schema/flag_configuration_optional.schema.json` | `src/schemas/flag_configuration_optional.schema.json` | Adapted: added `flag`/`kind`/`apiVersion` fields that exist in the CasC YAML wrapper but not the API-side schema. Re-check field list against `casc-service`'s `FlagConfig` struct (`flag_config_entity.go`), not the upstream API schema, when upstream changes. |
 | No upstream file (hand-authored from proto + examples) | `src/schemas/flag.schema.json`, `target_group.schema.json`, `property.schema.json` | These don't exist as full-file JSON Schema upstream. Source of truth is `casc-service`'s `Flag`/`TargetGroup`/`CustomProperty` struct yaml tags + `casc.proto`. Update field lists if those structs change. |
+| `flag.tpl`'s raw `{{ range }}` over `Labels`/`Variants` (bypasses `yaml.Marshal`, emits bare `labels:`/`availableValues:` key when empty) | `src/schemas/flag.schema.json` (`"type": ["array", "null"]` on both fields), `src/types.ts` `FlagDoc.labels`/`.availableValues` (typed `... | null`) | **Fixed after a real production false positive** on `AsafRollout/cascProd1` (flags `blat6`, `f1`, `zero8`, etc., all CloudBees-written). If `flag.tpl` is ever changed to marshal these fields properly (emitting `[]` instead of a bare key), this null-acceptance becomes merely harmless-but-unnecessary, not wrong — no need to revert it defensively, but it would be safe to. |
 | `flag_value.go` `FlagValue.Validate()` (split % == 100) | `src/businessRules.ts` `checkFlagValue` (the `split-sum` rule) | Keep the `1e4` scale constant in sync — see the comment at `flag_value.go`'s `splitPercentageScale` for why float64 summing + rounding is used instead of exact comparison. |
 | `flag_configuration.go` `validateValue` (schedule values boolean-only) | `src/businessRules.ts` `checkFlagValue` (the `schedule-requires-boolean` rule) | If upstream relaxes this to other flag types, update the `flagType !== 'boolean'` check. |
 | `flag_configuration.go` `validateValueMatchType` | `src/businessRules.ts` `checkFlagValue` (the `value-type-mismatch` rule) | Upstream switches on Go's `int`/`float32`/`bool`/`string` — JS has no int/float split, `typeof` is sufficient. |
