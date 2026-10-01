@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/flag-service/common.schema.json",
+  "title": "flag service common definitions",
+  "type": "array",
+  "description": "Common repeating items",
+  "items": { "$ref": "#/$defs/propertyCondition" },
+  "$defs": {
+    "propertyCondition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the property"
+        },
+        "operator": {
+          "type": "string",
+          "description": "The operator to use when comparing the property value to the condition value",
+          "enum": [
+            "in-array",
+            "is-undefined",
+            "is-true",
+            "is-false",
+            "eq",
+            "ne",
+            "gte",
+            "gt",
+            "lt",
+            "lte",
+            "regex",
+            "semver-gt",
+            "semver-eq",
+            "semver-ne",
+            "semver-gte",
+            "semver-lt",
+            "semver-lte",
+            "before",
+            "after",
+            "in-between"
+          ]
+        }
+      },
+      "allOf": [{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "is-undefined" },
+                { "const": "is-true" },
+                { "const": "is-false" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "additionalProperties": false,
+          "properties": { "name": true, "operator": true},
+          "required": ["name", "operator"]
+        },
+        "else": {
+          "additionalProperties": false,
+          "properties": { 
+            "name": true,
+            "operator": true,
+            "operands": {"type": "array"}
+          },
+          "required": ["name", "operator", "operands"]
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "in-array" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "anyOf": [{
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }, {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "eq" },
+                { "const": "ne" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+            "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 1,
+                "uniqueItems": true
+              }, {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 1,
+                "uniqueItems": true
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "gte" },
+                { "const": "gt" },
+                { "const": "lt" },
+                { "const": "lte" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 1,
+                "uniqueItems": true
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "semver-gt" },
+                { "const": "semver-eq" },
+                { "const": "semver-ne" },
+                { "const": "semver-gte" },
+                { "const": "semver-lt" },
+                { "const": "semver-lte" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 1,
+                "uniqueItems": true
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "before" },
+                { "const": "after" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "minItems": 1,
+                "maxItems": 1
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "in-between" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }]
+            }
+          }
+        }
+      },{
+        "if": {
+          "properties": {
+            "operator": {
+              "anyOf": [
+                { "const": "regex" }
+              ]
+            }
+          },
+          "required": ["operator"]
+        },
+        "then": {
+          "properties": {
+            "operands": {
+              "oneOf": [{
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 2
+              }]
+            }
+          }
+        }
+      }]
+    }
+  }
+}

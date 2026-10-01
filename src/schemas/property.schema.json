@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/casc-fm-validate-action/property.schema.json",
+  "title": "CasC custom property Definition",
+  "description": "Derived from common_proto casc.proto Property message and flag-service CustomPropertyType enum",
+  "type": "object",
+  "properties": {
+    "apiVersion": { "type": "string" },
+    "kind": { "const": "flag-properties" },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "enum": ["Boolean", "String", "Semver", "Number", "Datetime"]
+    },
+    "description": { "type": "string" }
+  },
+  "required": ["name", "type"],
+  "additionalProperties": false
+}

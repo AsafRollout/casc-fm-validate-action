@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/casc-fm-validate-action/flag_conditions.schema.json",
+  "title": "CasC flag conditions Definition",
+  "description": "Adapted from flag-service flag_conditions.schema.json: CasC references target groups by name, not id.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/condition" },
+  "uniqueItems": true,
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "properties": {
+        "flagValue": {
+          "$ref": "https://www.cloudbees.com/sdp/flag-service/flag_value.schema.json#/$defs/flagValue"
+        },
+        "allOf": { "$ref": "#/$defs/nestedArray" },
+        "anyOf": { "$ref": "#/$defs/nestedArray" },
+        "not": { "$ref": "#/$defs/not" },
+        "property": { "$ref": "#/$defs/property" },
+        "group": { "$ref": "#/$defs/group" },
+        "flag": { "$ref": "#/$defs/flag" }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": { "flagValue": {} }
+      },
+      "then": {
+        "minProperties": 2
+      },
+      "else": {
+        "minProperties": 1
+      }
+    },
+    "nestedArray": {
+      "type": "array",
+      "items": {
+        "properties": {
+          "allOf": { "$ref": "#/$defs/nestedArray" },
+          "anyOf": { "$ref": "#/$defs/nestedArray" },
+          "not": { "$ref": "#/$defs/not" },
+          "property": { "$ref": "#/$defs/property" },
+          "group": { "$ref": "#/$defs/group" },
+          "flag": { "$ref": "#/$defs/flag" }
+        },
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "not": {
+      "type": "object",
+      "properties": {
+        "allOf": { "$ref": "#/$defs/nestedArray" },
+        "anyOf": { "$ref": "#/$defs/nestedArray" },
+        "property": { "$ref": "#/$defs/property" },
+        "group": { "$ref": "#/$defs/group" },
+        "flag": { "$ref": "#/$defs/flag" }
+      },
+      "additionalProperties": false,
+      "maxProperties": 1
+    },
+    "property": {
+      "$ref": "https://www.cloudbees.com/sdp/flag-service/common.schema.json#/$defs/propertyCondition"
+    },
+    "group": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["name"],
+      "maxProperties": 1,
+      "additionalProperties": false
+    },
+    "flag": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" }
+          ]
+        }
+      },
+      "required": ["name", "value"],
+      "maxProperties": 2,
+      "additionalProperties": false
+    }
+  }
+}

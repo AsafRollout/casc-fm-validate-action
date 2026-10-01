@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/flag-service/flag_value.schema.json",
+  "title": "flag value definition",
+  "$ref": "#/$defs/flagValue",
+  "description": "Complete list of possible values the flag can evaluate to. Each value must be unique and correspond to a condition",
+  "$defs": {
+    "booleansArray": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "stringsArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "numbersArray": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "flagValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "valueWrittenInCode": {
+              "const": true
+            }
+          },
+          "additionalProperties": false,
+          "maxProperties": 1,
+          "minProperties": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "percentage": {
+                "$ref": "#/$defs/percentage"
+              },
+              "from": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false,
+            "maxProperties": 2,
+            "required": ["percentage", "from"]
+          }
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "percentage": {
+                "$ref": "#/$defs/percentage"
+              },
+              "option": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "maxProperties": 2,
+            "required": ["percentage", "option"]
+          }
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "percentage": {
+                "$ref": "#/$defs/percentage"
+              },
+              "option": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "maxProperties": 2,
+            "required": ["percentage", "option"]
+          }
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "percentage": {
+                "$ref": "#/$defs/percentage"
+              },
+              "option": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "maxProperties": 2,
+            "required": ["percentage", "option"]
+          }
+        }
+      ]
+    }
+  }
+}

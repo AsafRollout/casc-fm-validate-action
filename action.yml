@@ -1,0 +1,26 @@
+name: 'CloudBees Feature Management CasC Validator'
+description: 'Validates .cloudbees/casc/feature-management YAML files for structural, business-rule, and cross-reference errors before merge'
+author: 'asafRollout'
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Repo-root-relative path containing the CasC tree (the directory that contains "feature-management/")'
+    required: false
+    default: '.cloudbees/casc'
+  fail-on-warning:
+    description: 'Treat warnings as failures'
+    required: false
+    default: 'false'
+
+outputs:
+  errors-count:
+    description: 'Number of validation errors found'
+  warnings-count:
+    description: 'Number of validation warnings found'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

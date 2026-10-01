@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/casc-fm-validate-action/flag.schema.json",
+  "title": "CasC flag Definition",
+  "description": "Derived from common_proto casc.proto Flag message and casc-service example-casc-files/flag_example.yaml",
+  "type": "object",
+  "properties": {
+    "apiVersion": { "type": "string" },
+    "kind": { "const": "flag" },
+    "flag": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The flag's unique name"
+    },
+    "flagType": {
+      "type": "string",
+      "enum": ["boolean", "string", "number"]
+    },
+    "description": { "type": "string" },
+    "labels": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "availableValues": {
+      "type": "array",
+      "description": "Only valid for string/number flags, not boolean",
+      "items": {
+        "oneOf": [{ "type": "string" }, { "type": "number" }]
+      },
+      "uniqueItems": true
+    },
+    "isPermanent": { "type": "boolean" }
+  },
+  "required": ["flag"],
+  "additionalProperties": false
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.cloudbees.com/sdp/casc-fm-validate-action/flag_configuration.schema.json",
+  "title": "CasC flag Configuration Definition",
+  "description": "Defines the configuration of a flag configuration for a specific environment",
+  "allOf": [
+    {
+      "$ref": "https://www.cloudbees.com/sdp/casc-fm-validate-action/flag_configuration_optional.schema.json#/$defs/flagConfigOptional"
+    }
+  ],
+  "required": ["flag", "enabled", "defaultValue"]
+}
